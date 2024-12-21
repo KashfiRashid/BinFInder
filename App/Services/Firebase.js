@@ -23,23 +23,27 @@
  * - **Notifications:** Firebase Cloud Messaging to notify users of new trashcan locations, updates, or gamification rewards.
  */
 
-import { initializeApp } from "firebase/app"; // Firebase core module for app initialization
-import { getAuth } from "firebase/auth"; // Firebase authentication module
-
 // Your web app's Firebase configuration
 // Replace these credentials with your Firebase project details
+import { initializeApp } from "firebase/app";
+import "firebase/firestore";
+import "firebase/storage";
+import { getStorage } from "firebase/storage";
+import { getAuth } from "firebase/auth";
+import { getFirestore } from "firebase/firestore";
+
 const firebaseConfig = {
-  apiKey: "AIzaSyA8gFZ5nC7JNFO7RtOP1JvyR-reLTgIUf0", // API key for accessing Firebase services
-  authDomain: "binfinder-7806c.firebaseapp.com", // Firebase Authentication domain
-  projectId: "binfinder-7806c", // Unique project ID
-  storageBucket: "binfinder-7806c.firebasestorage.app", // Firebase Storage bucket for storing files
-  messagingSenderId: "738996297668", // Sender ID for Firebase Cloud Messaging
-  appId: "1:738996297668:web:adca3ea1f2a45203510e91", // Unique app ID for Firebase configuration
+  apiKey: "AIzaSyA8gFZ5nC7JNFO7RtOP1JvyR-reLTgIUf0",
+  authDomain: "binfinder-7806c.firebaseapp.com",
+  projectId: "binfinder-7806c",
+  storageBucket: "binfinder-7806c.firebasestorage.app",
+  messagingSenderId: "738996297668",
+  appId: "1:738996297668:web:adca3ea1f2a45203510e91",
 };
 
-// Initialize Firebase app instance
 const app = initializeApp(firebaseConfig);
 
-// Export Firebase Authentication
-// This allows other parts of the app to use authentication functions like login, signup, and logout
+export const storage = getStorage(app);
 export const auth = getAuth(app);
+export const db = getFirestore(app);
+
