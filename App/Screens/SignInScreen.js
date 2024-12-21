@@ -17,6 +17,7 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-nativ
 import { auth } from '../Services/Firebase'; // Firebase service for authentication
 import { signInWithEmailAndPassword } from 'firebase/auth'; // Firebase method for signing in users
 import { saveData, loadData, clearData } from '../Services/Storage'; // Utility functions for local storage
+import { useNavigation } from '@react-navigation/native';
 
 export default function SignInScreen({ navigation }) {
   // State variables
@@ -25,6 +26,7 @@ export default function SignInScreen({ navigation }) {
   const [rememberMe, setRememberMe] = useState(false); // Toggles the "Remember Me" feature
   const [errorMessage, setErrorMessage] = useState(''); // Displays authentication error messages
   const [isFormValid, setIsFormValid] = useState(false); // Tracks whether the form is valid
+  const { navigate } = useNavigation();
 
   // Effect: Load saved credentials if "Remember Me" is enabled
   useEffect(() => {
@@ -60,7 +62,7 @@ export default function SignInScreen({ navigation }) {
       } else {
         await clearData('user'); // Clear saved credentials if not enabled
       }
-      navigation.replace('Main'); // Navigate to the main TabNavigation screen
+      navigate('Main', {} ); // Navigate to the main TabNavigation screen
     } catch (error) {
       // Handle common Firebase authentication errors
       if (error.code === 'auth/invalid-email') {

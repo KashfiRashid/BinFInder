@@ -23,47 +23,111 @@
  * - **Temporary User State:** Save temporary states, such as unsaved inputs or ongoing quiz progress.
  */
 
-import AsyncStorage from '@react-native-async-storage/async-storage'; // AsyncStorage module for local storage
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
+import { auth, db } from './Firebase'; // Adjust import path as needed
 
-/**
- * Save data to AsyncStorage
- * 
- * @param {string} key - The key under which the value will be stored.
- * @param {any} value - The value to be stored. It is serialized to JSON.
- */
+// Save data to AsyncStorage
 export const saveData = async (key, value) => {
   try {
-    const jsonValue = JSON.stringify(value); // Convert value to JSON string
-    await AsyncStorage.setItem(key, jsonValue); // Save JSON string to AsyncStorage
+    const jsonValue = JSON.stringify(value);
+    await AsyncStorage.setItem(key, jsonValue);
   } catch (error) {
-    console.error('Error saving data:', error); // Log error if saving fails
+    console.error('Error saving data:', error);
   }
 };
 
-/**
- * Load data from AsyncStorage
- * 
- * @param {string} key - The key of the value to be retrieved.
- * @returns {Promise<any>} - The parsed value retrieved from AsyncStorage, or null if not found.
- */
+// Load data from AsyncStorage
 export const loadData = async (key) => {
   try {
-    const jsonValue = await AsyncStorage.getItem(key); // Retrieve JSON string from AsyncStorage
-    return jsonValue != null ? JSON.parse(jsonValue) : null; // Parse JSON string to an object
+    const jsonValue = await AsyncStorage.getItem(key);
+    return jsonValue != null ? JSON.parse(jsonValue) : null;
   } catch (error) {
-    console.error('Error loading data:', error); // Log error if retrieval fails
+    console.error('Error loading data:', error);
+  }
+};
+
+// Clear data from AsyncStorage
+export const clearData = async (key) => {
+  try {
+    await AsyncStorage.removeItem(key);
+  } catch (error) {
+    console.error('Error clearing data:', error);
   }
 };
 
 /**
- * Clear data from AsyncStorage
+ * Sync user score between Firestore and AsyncStorage
  * 
- * @param {string} key - The key of the value to be cleared.
+ * @returns {Promise<number>} - The user's score
  */
-export const clearData = async (key) => {
+export const syncScore = async () => {
+  const user = auth.currentUser;
+  if (!user) {
+    console.warn('No authenticated user');
+    return 0; // Default score
+  }
+
+  const localKey = `score_${user.uid}`;
+  let localScore = await loadData(localKey);
+
   try {
-    await AsyncStorage.removeItem(key); // Remove item from AsyncStorage
+    const userRef = doc(db, "Scores", user.uid);
+    const userDoc = await getDoc(userRef);
+
+    if (userDoc.exists()) {
+      const firestoreScore = userDoc.data().score || 0;
+
+      // Sync local data if different
+      if (localScore === null || localScore !== firestoreScore) {
+        await saveData(localKey, firestoreScore); // Cache Firestore score locally
+        return firestoreScore;
+      } else {
+        return localScore; // Return cached score if synced
+      }
+    } else {
+      // Initialize Firestore score if document doesn't exist
+      await setDoc(userRef, { score: 0 });
+      await saveData(localKey, 0);
+      return 0; // Initial score
+    }
   } catch (error) {
-    console.error('Error clearing data:', error); // Log error if removal fails
+    console.error('Error syncing score:', error);
+
+    // Fallback to local score if Firestore is unavailable
+    return localScore || 0;
+  }
+};
+
+/**
+ * Update user's score locally and in Firestore
+ * 
+ * @param {number} points - Points to add to the user's score
+ */
+export const updateScore = async (points) => {
+  const user = auth.currentUser;
+  if (!user) {
+    console.warn('No authenticated user');
+    return;
+  }
+
+  const localKey = `score_${user.uid}`;
+  let localScore = await loadData(localKey);
+
+  if (localScore === null) {
+    localScore = 0; // Default to 0 if no local score exists
+  }
+
+  const newScore = localScore + points;
+
+  // Update local storage
+  await saveData(localKey, newScore);
+
+  try {
+    // Update Firestore
+    const userRef = doc(db, "Scores", user.uid);
+    await updateDoc(userRef, { score: newScore });
+  } catch (error) {
+    console.error('Error updating score in Firestore:', error);
   }
 };

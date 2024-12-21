@@ -14,8 +14,10 @@
 
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
-import { auth } from '../Services/Firebase'; // Firebase authentication service
+import { auth, db} from '../Services/Firebase'; // Firebase authentication service
+import { collection, getDocs, query, where, addDoc, setDoc, doc } from "firebase/firestore";
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth'; // Firebase methods for user creation and profile updates
+import { useNavigation } from '@react-navigation/native';
 
 export default function CreateAccountScreen({ navigation }) {
   // State variables for user inputs and error handling
@@ -26,6 +28,8 @@ export default function CreateAccountScreen({ navigation }) {
   const [errorMessage, setErrorMessage] = useState(''); // Displays errors related to form submission
   const [passwordError, setPasswordError] = useState(''); // Displays password-specific errors
   const [showCriteria, setShowCriteria] = useState(false); // Toggles the display of password criteria
+
+  const { navigate } = useNavigation();
 
   // Password strength criteria for validation
   const passwordCriteria = {
@@ -46,6 +50,22 @@ export default function CreateAccountScreen({ navigation }) {
     }
   };
 
+  // Handles adding a new account to the Firebase
+  async function insertNewUser() {
+    try{
+        await setDoc(doc(db, "users", auth.currentUser.uid), {
+          cardScore: 3,
+          dateJoin: new Date().toISOString(),
+          pins: 0,
+          trust: 10,
+          username: username,
+        });
+        alert(`User "${username}" added to "${auth.currentUser.uid}" location.`);
+      } catch (e) {
+        alert("was called");
+      }
+    };
+
   // Handles account creation with Firebase
   const handleSignUp = async () => {
     if (password !== confirmPassword) {
@@ -59,9 +79,9 @@ export default function CreateAccountScreen({ navigation }) {
 
       // Updates the user's display name in their profile
       await updateProfile(user, { displayName: username });
-
+      await insertNewUser();
       alert('Account created successfully!');
-      navigation.replace('SignIn'); // Redirects to the Sign-In screen
+      navigate('SignIn', {}); // Redirects to the Sign-In screen
     } catch (error) {
       console.error('Error creating account:', error.message); // Logs error for debugging
       // Handles specific Firebase error codes
